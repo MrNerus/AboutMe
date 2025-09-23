@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ard Nerus | Interactive Portfolio</title>
+<!-- Libs -->
+<script defer src="https://cdn.jsdelivr.net/npm/interactjs/dist/interact.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+<style>
+  :root {
+    --bg: #020617;
+    --card-bg: rgba(17, 24, 39, 0.75);
+    --accent: #818cf8;
+    --muted: #94a3b8;
+    --rope-color: rgba(129, 140, 248, 0.25);
+    --glow: rgba(129, 140, 248, 0.3);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0 }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    background: linear-gradient(180deg, #0c1222 0%, var(--bg) 100%);
+    background-attachment: fixed; /* smooth, single-page feel */
+    color: #e6eef8;
+    overflow-x: hidden;
+  }
+  header {
+    position: fixed; left: 50%; transform: translateX(-50%); top: 16px;
+    height: 56px; display: flex; align-items: center; justify-content: center;
+    z-index: 2000; background: rgba(5, 10, 20, 0.6); backdrop-filter: blur(8px);
+    border-radius: 12px; padding: 8px 24px; border: 1px solid rgba(129, 140, 248, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); font-weight: 600; color: var(--accent);
+  }
+
+  .timeline-container { position: relative; max-width: 1200px; margin: 0 auto; }
+  .rope {
+    position: absolute; left: 50%; transform: translateX(-50%); width: 4px;
+    /* smooth gradient rope across full run */
+    background: linear-gradient(180deg, rgba(129,140,248,0.6) 0%, rgba(129,140,248,0.18) 70%, rgba(129,140,248,0.1) 100%);
+    box-shadow: 0 0 20px var(--glow);
+    z-index: 1000; pointer-events: none; display: none;
+  }
+
+  .section { position: relative; display: flex; flex-direction: column; align-items: center; padding: 80px 12px; z-index: 1; }
+  .section.hero { justify-content: center; min-height: 100vh; text-align: center; }
+  .section.rocket-stage { min-height: 100vh; position: relative; overflow: visible; }
+  .section.timeline { position: relative; }
+  .section.hire-section { min-height: 100vh; justify-content: center; }
+
+  .node {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    width: 16px; height: 16px; border-radius: 50%;
+    background: linear-gradient(180deg, #e6f0ff, #cdd6f4);
+    z-index: 1003; box-shadow: 0 0 10px var(--glow);
+  }
+
+  .hero h1 { font-size: clamp(40px, 8vw, 80px); line-height: 1.1; color: #dbeafe; }
+  .hero p { margin-top: 16px; color: var(--muted); font-size: clamp(16px, 3vw, 20px); max-width: 600px; }
+
+  .rocket-canvas { position: relative; height: 100vh; width: 100%; }
+  .rocket {
+    position: absolute; width: 120px; height: 120px;
+    top: calc(100% - 60px); left: 50%;
+    transform: translate(-50%, 0);
+    filter: drop-shadow(0 20px 40px rgba(100, 120, 255, 0.15));
+    z-index: 1003;
+  }
+
+  .section-title {
+    width: 100%; text-align: center; font-size: 1.75rem; color: var(--accent); margin-bottom: 100px; opacity: 0.9;
+  }
+  .about-me-label {
+    position: absolute; top: 40px; left: 50%; transform: translateX(-50%);
+    color: var(--accent); font-weight: 600; font-size: 1.2rem;
+  }
+
+  .card {
+    width: clamp(280px, 30vw, 340px); background: var(--card-bg); border: 1px solid rgba(129, 140, 248, 0.15);
+    border-radius: 12px; padding: 16px; backdrop-filter: blur(8px);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4); cursor: grab;
+    position: absolute; z-index: 1004; touch-action: none;
+    will-change: transform; /* smoother */
+  }
+  .card:active { cursor: grabbing; }
+  .card h3 { color: var(--accent); font-size: 1.1rem; margin-bottom: 8px; }
+  .card p { color: var(--muted); font-size: 0.95rem; margin-bottom: 12px; }
+  .card .date { font-size: 0.8rem; color: var(--muted); opacity: 0.7; margin-bottom: 12px; }
+  .card img { width: 100%; height: auto; border-radius: 8px; margin-top: 12px; display: block; }
+
+  .card-buttons { margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .card-buttons .btn {
+    background: linear-gradient(90deg, #818cf8, #c7d2fe); padding: 8px 14px;
+    border-radius: 8px; border: none; color: #0b1220; font-weight: 700;
+    cursor: pointer; box-shadow: 0 6px 24px var(--glow);
+  }
+  .card-buttons .btn:hover { filter: brightness(0.95); }
+
+  svg.connector { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1002; }
+
+  .hire-box { position: relative; display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; }
+  .hire-box .cta {
+    background: linear-gradient(90deg, #818cf8, #c7d2fe); padding: 14px 28px;
+    border-radius: 999px; border: none; color: #1e293b; font-weight: 700;
+    cursor: pointer; box-shadow: 0 10px 40px var(--glow);
+  }
+  .handles { display: none; flex-direction: column; gap: 12px; margin-top: 8px; }
+  .handles a { color: var(--accent); text-decoration: none; font-size: 1.1rem; }
+
+  /* Prevent accidental text selection while dragging */
+  .card, .card * { user-select: none; }
+  body.dragging, body.dragging * { user-select: none !important; }
+</style>
+</head>
+<body>
+<header>Ard Nerus — Interactive Portfolio</header>
+<div class="timeline-container" id="timeline">
+  <div class="rope" id="rope"></div>
+  <svg id="globalConnector" class="connector" aria-hidden="true"></svg>
+</div>
+
+<script>
+/* -------------------- CONTENT -------------------- */
+const portfolioData = {
+  name: 'Ard Nerus',
+  socials: {
+    github: 'https://github.com/MrNerus',
+    linkedin: 'https://www.linkedin.com/in/surendra-ghimire-a56170381'
+  },
+  sections: [
+    { type: 'hero', id: 'hero', title: "Hi, I'm Ard Nerus", subtitle: 'I Think, I Build, I Execute. Scroll down to begin the journey.' },
+    { type: 'rocket', id: 'rocket' },
+    { type: 'timeline', id: 'PersonalInfo', title: 'Personal Information',
+      cards: [
+        { heading: 'Formal Name', description: 'Surendra Prasad Ghimire'},
+        { heading: 'Address', description: 'Godawari - 3, Lalitpur, Nepal'},
+        { heading: 'DOB', description: 'October 12, 2002'},
+        { heading: 'Phone No', description: '+977 9840522155'},
+        { heading: 'Email', description: 'mr.ard.nerus@gmail.com'},
+      ]
+    },
+    { type: 'timeline', id: 'EducationalInfo', title: 'Education',
+      cards: [
+        { heading: 'SEE', date: '2074 B.S Batch', description: 'Suryadaya Edicational Development Academy'},
+        { heading: '+2', date: '2076 B.S Batch', description: 'Advance International Model School. Under Science Faculty.'},
+        { heading: 'Bachelors', date: '2082 B.S Batch', description: 'AIMS International College. BCA.'},
+      ]
+    },
+    { type: 'timeline', id: 'experience', title: 'Working Experience',
+      cards: [
+        { heading: 'AIMS International College', date: "2078-2080", description: 'IT Person + Exam coordinator'},
+        { heading: 'IMS software Pvt. Ltd', date: "2080-2081", description: 'IT Person + Exam coordinator'},
+        { heading: 'IMS software Pvt. Ltd', date: '2081-2082', description: 'Dotnet Trainee'}
+      ]
+    },
+    { type: 'timeline', id: 'PersonalProjects', title: 'Personal Projects',
+      cards: [
+        // { heading: 'NumeriCall', date: 'Calculator', description: 'Uses AST to parse Mathematical Expression. without using eval() equivalent.', buttons:[{label:'Demo', link:'#'},{label:'Code', link:'#'}] },
+        // { heading: 'LifeLink', date: 'Patient Management System', description: 'Customer Doctor Relation.', buttons:[{label:'Demo', link:'#'},{label:'Code', link:'#'}] },
+        // { heading: 'Transact Ease', date: 'Membership card', description: 'Intended for Membership / Loyalty Program', buttons:[{label:'Demo', link:'#'},{label:'Code', link:'#'}] },
+        // { heading: 'SaaS', date: 'Single Tenant SaaS', description: 'Single Tenant Web Deployment In SAAS', buttons:[{label:'Demo', link:'#'},{label:'Code', link:'#'}] },
+        { heading: 'Resturant Website', date: 'For Savana Sushi', description: 'Portal to get public info',image: './SavanaSushi.jpg', buttons:[{label:'View Site', link:'https://savanasushi.neruxin.com'}] }
+      ]
+    },
+    { type: 'hire', id: 'hire', title: 'Wanna Hire?', subtitle: "Let's build something amazing together." }
+  ]
+};
+// const portfolioData = {
+//   name: 'Ard Nerus',
+//   socials: {
+//     github: 'https://github.com/your-username',
+//     linkedin: 'https://linkedin.com/in/your-username',
+//     twitter: 'https://twitter.com/your-username'
+//   },
+//   sections: [
+//     { type: 'hero', id: 'hero', title: "Hi, I'm Ard Nerus", subtitle: 'I design & build futuristic, interactive web experiences. Scroll down to begin the journey.' },
+//     { type: 'rocket', id: 'rocket' },
+//     { type: 'timeline', id: 'experience', title: 'Experience',
+//       cards: [
+//         { heading: 'Lead Developer', date: '2022 - Present', description: 'Leading a team to build next-gen web applications.', image: '20230516_143526-01.jpeg',
+//           buttons: [{label:'Case Study', link:'#'},{label:'Repo', link:'#'}] },
+//         { heading: 'Frontend Specialist', description: 'Focused on creating intuitive and performant user interfaces for various clients.',
+//           buttons: [{label:'View Work', link:'#'}] },
+//       ]
+//     },
+//     { type: 'timeline', id: 'projects', title: 'Projects',
+//       cards: [
+//         { heading: 'Project Nova', description: 'An interactive data visualization tool.', image: '20210607_140533.jpg',
+//           buttons: [{label:'Live Demo', link:'#'},{label:'GitHub', link:'#'}] },
+//         { heading: 'Personal Portfolio', date: '2023', description: 'This very portfolio, built with vanilla JS, HTML, and CSS.', buttons:[{label:'Source', link:'#'}]},
+//         { heading: 'E-commerce Platform', image: '20201030_142012.jpg', buttons:[{label:'Overview', link:'#'}] }
+//       ]
+//     },
+//     { type: 'timeline', id: 'achievements', title: 'Achievements',
+//       cards: [
+//         { heading: 'Hackathon Winner', date: '2021-10-16', image: '20211016_163258-01.jpeg', buttons:[{label:'Photos', link:'#'}] },
+//         { heading: 'Top Performer Award' },
+//         { heading: 'Speaker at Local Meetup', description: 'Gave a talk on modern CSS techniques.', buttons:[{label:'Slides', link:'#'}] },
+//       ]
+//     },
+//     { type: 'hire', id: 'hire', title: 'Interested?', subtitle: "Let's build something amazing together." }
+//   ]
+// };
+
+/* -------------------- RENDER & SETUP -------------------- */
+document.addEventListener('DOMContentLoaded', () => {
+  const timeline = document.getElementById('timeline');
+  const connectorSVG = document.getElementById('globalConnector');
+  const rope = document.getElementById('rope');
+
+  function rocketSVG() {
+    return `<svg viewBox="0 0 200 200" xml:space="preserve"><path fill="#FFF" d="M100 10c-5.5 0-10 4.5-10 10v10h20V20c0-5.5-4.5-10-10-10z"/><path fill="#E0E0E0" d="M100 30h-10l-5 10h20l-5-10z"/><path fill="#CFD8DC" d="M90 30h-5l-5 10h10V30zm20 0h-5v10h10l-5-10z"/><path fill="#FFF" d="M100 40c-16.6 0-30 13.4-30 30v80h60V70c0-16.6-13.4-30-30-30z"/><path fill="#E0E0E0" d="M100 40v110h30V70c0-16.6-13.4-30-30-30z"/><path fill="#4DD0E1" d="M100 80c-11 0-20 9-20 20s9 20 20 20 20-9 20-20-9-20-20-20z"/><path fill="#26C6DA" d="M100 80v40c11 0 20-9 20-20s-9-20-20-20z"/><path fill="#FF7043" d="M60 150v20c0 5.5 4.5 10 10 10h60c5.5 0 10-4.5 10-10v-20H60z"/><path fill="#F4511E" d="M100 150v30h40c5.5 0 10-4.5 10-10v-20h-50z"/><path fill="#FFC107" d="M100 180c-11 0-20 9-20 20h40c0-11-9-20-20-20z"/><path fill="#FFB300" d="M100 180v20h20c0-11-9-20-20-20z"/></svg>`;
+  }
+
+  let isFirstTimeline = true;
+  portfolioData.sections.forEach(s => {
+    const sec = document.createElement('div');
+    sec.className = 'section';
+    sec.id = s.id;
+
+    if (s.type === 'hero') {
+      sec.classList.add('hero');
+      const wrap = document.createElement('div');
+      wrap.className = 'hero';
+      const h = document.createElement('h1'); h.innerText = s.title;
+      const p = document.createElement('p'); p.innerText = s.subtitle;
+      wrap.appendChild(h); wrap.appendChild(p); sec.appendChild(wrap);
+
+    } else if (s.type === 'rocket') {
+      sec.classList.add('rocket-stage');
+      const stage = document.createElement('div'); stage.className = 'rocket-canvas';
+      const rocketEl = document.createElement('div'); rocketEl.className = 'rocket';
+      rocketEl.innerHTML = rocketSVG();
+      stage.appendChild(rocketEl); sec.appendChild(stage);
+      sec._rocketEl = rocketEl;
+
+    } else if (s.type === 'timeline') {
+      sec.classList.add('timeline');
+      // provisional height; will be adjusted via placeElements
+      const perCard = 520; // px
+      sec.style.minHeight = `${(s.cards.length * perCard) + 300}px`;
+
+      if (isFirstTimeline) {
+        const aboutLabel = document.createElement('div');
+        aboutLabel.className = 'about-me-label'; aboutLabel.id = 'about-me-label';
+        aboutLabel.innerText = 'About Me';
+        sec.appendChild(aboutLabel);
+        isFirstTimeline = false;
+      }
+
+      const title = document.createElement('h2'); title.className = 'section-title';
+      title.innerText = s.title; sec.appendChild(title);
+
+      s.cards.forEach((c, i) => {
+        const cardId = `${s.id}-card-${i}`;
+        const nodeId = `${s.id}-node-${i}`;
+
+        const node = document.createElement('div');
+        node.className = 'node'; node.id = nodeId; sec.appendChild(node);
+
+        const card = document.createElement('div');
+        card.className = 'card'; card.id = cardId; card.dataset.nodeId = nodeId;
+
+        let content = `<h3>${c.heading}</h3>`;
+        if (c.date) content += `<div class="date">${c.date}</div>`;
+        if (c.description) content += `<p>${c.description}</p>`;
+        if (c.image) content += `<img src="${c.image}" alt="${c.heading}">`;
+        if (c.buttons) {
+          content += `<div class="card-buttons">${c.buttons.map(b => `<button class="btn" onclick="window.open('${b.link}','_blank')">${b.label}</button>`).join('')}</div>`;
+        }
+        card.innerHTML = content;
+        card.dataset.side = (i % 2 === 0) ? 'left' : 'right';
+        card.setAttribute('data-x', '0'); card.setAttribute('data-y', '0');
+        sec.appendChild(card);
+      });
+
+    } else if (s.type === 'hire') {
+      sec.classList.add('hire-section');
+      const box = document.createElement('div'); box.className = 'hire-box'; box.id = 'hire-box';
+      const h = document.createElement('h2'); h.innerText = s.title;
+      const p = document.createElement('p'); p.innerText = s.subtitle;
+      const btn = document.createElement('button'); btn.className = 'cta'; btn.innerText = 'Show Socials';
+      const handles = document.createElement('div'); handles.className = 'handles';
+      for (const [k, u] of Object.entries(portfolioData.socials)) {
+        const a = document.createElement('a'); a.href = u; a.target = '_blank'; a.innerText = k.charAt(0).toUpperCase() + k.slice(1); handles.appendChild(a);
+      }
+      btn.addEventListener('click', () => { handles.style.display = handles.style.display === 'flex' ? 'none' : 'flex'; });
+      box.appendChild(h); box.appendChild(p); box.appendChild(btn); box.appendChild(handles);
+      sec.appendChild(box);
+    }
+
+    timeline.appendChild(sec);
+  });
+
+  /* -------------------- LOGIC & INTERACTIONS -------------------- */
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  function updateAllElements() {
+    // redraw all connectors
+    const connectorSVG = document.getElementById('globalConnector');
+    const timeline = document.getElementById('timeline');
+    connectorSVG.innerHTML = '';
+    const containerRect = timeline.getBoundingClientRect();
+    document.querySelectorAll('.card').forEach(card => {
+      const node = document.getElementById(card.dataset.nodeId);
+      if (!node) return;
+      const nodeRect = node.getBoundingClientRect();
+      const cardRect = card.getBoundingClientRect();
+      const nodeCenter = { x: nodeRect.left + nodeRect.width / 2, y: nodeRect.top + nodeRect.height / 2 };
+      const cardAnchorX = (card.dataset.side === 'left') ? cardRect.right : cardRect.left;
+      const cardAnchorY = cardRect.top + cardRect.height / 2;
+
+      const direction = (card.dataset.side === 'left') ? -1 : 1;
+      const startX = nodeCenter.x - containerRect.left;
+      const startY = nodeCenter.y - containerRect.top;
+      const endX = cardAnchorX - containerRect.left;
+      const endY = cardAnchorY - containerRect.top;
+
+      const cp1x = startX + direction * 60;
+      const cp1y = startY;
+      const cp2x = endX - direction * 60;
+      const cp2y = endY;
+
+      const d = `M ${startX} ${startY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${endX} ${endY}`;
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      path.setAttribute('d', d);
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', 'rgba(129, 140, 248, 0.3)');
+      path.setAttribute('stroke-width', '2');
+      connectorSVG.appendChild(path);
+    });
+  }
+
+  function updateRopePosition(){
+    const timeline = document.getElementById('timeline');
+    const rope = document.getElementById('rope');
+    const aboutLabel = document.getElementById('about-me-label');
+    const hireBox = document.getElementById('hire-box');
+    if(!aboutLabel || !hireBox) return;
+    const containerRect = timeline.getBoundingClientRect();
+    const startTop = aboutLabel.getBoundingClientRect().top - containerRect.top + aboutLabel.offsetHeight + 20;
+    const endBoxRect = hireBox.getBoundingClientRect();
+    const endTop = endBoxRect.top - containerRect.top + (endBoxRect.height / 2);
+    rope.style.top = `${startTop}px`;
+    rope.style.height = `${Math.max(0, endTop - startTop)}px`;
+    rope.style.display = 'block';
+  }
+
+  function placeElements() {
+    // Even spacing inside each timeline section
+    document.querySelectorAll('.section.timeline').forEach(sec => {
+      const cards = Array.from(sec.querySelectorAll('.card'));
+      const nodes = cards.map(c => document.getElementById(c.dataset.nodeId));
+      if (!cards.length) return;
+
+      const sectionHeight = sec.offsetHeight; // includes minHeight we set
+      const topPad = 140; const bottomPad = 160;
+      const usable = Math.max(0, sectionHeight - topPad - bottomPad);
+      const spacing = usable / (cards.length + 1);
+
+      cards.forEach((card, i) => {
+        const node = nodes[i]; if (!node) return;
+        const y = topPad + spacing * (i + 1);
+        node.style.top = `${y}px`;
+        // sides
+        const cardOffset = `clamp(80px, 12vw, 150px)`;
+        if (card.dataset.side === 'left') {
+          card.style.left = `calc(50% - ${cardOffset} - clamp(280px, 30vw, 340px))`;
+        } else {
+          card.style.left = `calc(50% + ${cardOffset})`;
+        }
+        // vertical center against node
+        card.style.top = `${y - card.offsetHeight / 2}px`;
+        // reset drag offset (without jumping in-place if already dragged)
+        if (!card.__placedOnce) {
+          card.setAttribute('data-x', '0'); card.setAttribute('data-y', '0');
+          card.style.transform = 'translate(0,0)';
+          card.__placedOnce = true;
+        }
+      });
+    });
+
+    const hireBox = document.getElementById('hire-box');
+    if(hireBox) {
+      const hireSection = document.getElementById('hire');
+      hireBox.style.top = `${(hireSection.offsetHeight - hireBox.offsetHeight) / 2}px`;
+    }
+
+    updateRopePosition();
+    updateAllElements();
+  }
+
+  // Helpers
+  const getXYFromTransform = (el) => {
+    const t = getComputedStyle(el).transform;
+    if (!t || t === 'none') return { x: 0, y: 0 };
+    try {
+      const m = new DOMMatrixReadOnly(t);
+      return { x: m.m41 || 0, y: m.m42 || 0 };
+    } catch(e) {
+      return { x: 0, y: 0 };
+    }
+  };
+
+  // Smooth drag & return with larger free-roam + viewport clamp + bouncy snap
+  const DRAG_RADIUS = Math.min(window.innerHeight, window.innerWidth) * 0.9; // bigger roam radius
+  const VIEW_MARGIN = 24;  // keep card visible in viewport while dragging
+
+  interact('.card').draggable({
+    inertia: false,
+    listeners: {
+      start(event) {
+        const target = event.target;
+        anime.remove(target);
+        target.style.transition = 'none';
+        // align internal state with actual transform to prevent teleport
+        const { x, y } = getXYFromTransform(target);
+        target.setAttribute('data-x', x);
+        target.setAttribute('data-y', y);
+        document.body.classList.add('dragging');
+      },
+      move(event) {
+        const target = event.target;
+        let x = (parseFloat(target.getAttribute('data-x')) || 0) + event.dx;
+        let y = (parseFloat(target.getAttribute('data-y')) || 0) + event.dy;
+
+        // soft radius clamp: allow freely, add resistance outside radius
+        const d = Math.hypot(x, y);
+        if (d > DRAG_RADIUS) {
+          const angle = Math.atan2(y, x);
+          const eased = DRAG_RADIUS + (d - DRAG_RADIUS) * 0.3; // resistance
+          x = eased * Math.cos(angle);
+          y = eased * Math.sin(angle);
+        }
+
+        // apply tentative transform
+        target.style.transform = `translate(${x}px, ${y}px)`;
+        // viewport clamp (keep fully on-screen with margin)
+        const rect = target.getBoundingClientRect();
+        let fixX = 0, fixY = 0;
+        if (rect.left < VIEW_MARGIN) fixX = VIEW_MARGIN - rect.left;
+        if (rect.right > window.innerWidth - VIEW_MARGIN) fixX = (window.innerWidth - VIEW_MARGIN) - rect.right;
+        const topLimit = VIEW_MARGIN;
+        const bottomLimit = window.innerHeight - VIEW_MARGIN;
+        if (rect.top < topLimit) fixY = topLimit - rect.top;
+        if (rect.bottom > bottomLimit) fixY = bottomLimit - rect.bottom;
+        if (fixX !== 0 || fixY !== 0) {
+          x += fixX; y += fixY;
+          target.style.transform = `translate(${x}px, ${y}px)`;
+        }
+
+        target.setAttribute('data-x', x);
+        target.setAttribute('data-y', y);
+        updateAllElements(); // real-time curve follow
+      },
+      end(event) {
+        const card = event.target;
+        document.body.classList.remove('dragging');
+        const x = parseFloat(card.getAttribute('data-x')) || 0;
+        const y = parseFloat(card.getAttribute('data-y')) || 0;
+
+        // snap back to origin with bouncy physics
+        anime({
+          targets: card,
+          translateX: 0,
+          translateY: 0,
+          duration: 1400,
+          easing: 'easeOutElastic(1, .5)', // bouncy
+          update: updateAllElements,
+          complete: () => {
+            card.setAttribute('data-x', 0);
+            card.setAttribute('data-y', 0);
+          }
+        });
+      }
+    }
+  });
+
+  function initRocket() {
+    const rocketSection = document.querySelector('.rocket-stage');
+    if (!rocketSection || !rocketSection._rocketEl) return;
+    const rocket = rocketSection._rocketEl;
+    const onScroll = () => {
+      const rect = rocketSection.getBoundingClientRect();
+      const vh = window.innerHeight;
+      const progress = clamp(1 - rect.top / vh, 0, 1);
+      const translateY = -progress * (vh * 1.5); // travels bottom -> top smoothly
+      rocket.style.transform = `translate(-50%, ${translateY}px)`;
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+  }
+
+  // Ensure images are loaded before positioning to avoid clumping
+  function waitForImages() {
+    const imgs = Array.from(document.images);
+    if (imgs.length === 0) return Promise.resolve();
+    return Promise.all(imgs.map(img => img.complete ? Promise.resolve() : new Promise(res => { img.addEventListener('load', res); img.addEventListener('error', res); })));
+  }
+
+  // Debounced resize
+  let resizeTO;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTO);
+    resizeTO = setTimeout(() => { placeElements(); }, 80);
+  });
+
+  // Initial layout
+  waitForImages().then(() => {
+    placeElements();
+    initRocket();
+  });
+
+  // Update connectors on scroll for parallax + follow
+  window.addEventListener('scroll', () => {
+    updateAllElements();
+  }, { passive: true });
+});
+</script>
+</body>
+</html>
